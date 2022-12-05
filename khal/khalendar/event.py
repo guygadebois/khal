@@ -888,6 +888,11 @@ def create_timezone(
     easy solution, we'd really need to ship another version of the OLSON DB.
 
     """
+    # TODOGilles - My fix to get correct Europe/Dublin timezone
+    # This replicates Android(Etar)-created events with uses an old DTSTART date with RRULE set
+    # instead of no RRULE and a list of DTSTART with future dates, that Khal was setting
+    return _gilles_custom_dublin_static()
+
     if isinstance(tz, StaticTzInfo):
         return _create_timezone_static(tz)
 
@@ -965,4 +970,40 @@ def _create_timezone_static(tz: StaticTzInfo) -> icalendar.Timezone:
     subcomp.add('TZOFFSETTO', tz._utcoffset)  # type: ignore
     subcomp.add('TZOFFSETFROM', tz._utcoffset)  # type: ignore
     timezone.add_component(subcomp)
+    return timezone
+
+def _gilles_custom_dublin_static():
+    """Gilles custom code.
+    creates a Dublin static timezone
+
+    :returns: timezone information
+    :rtype: icalendar.Timezone()
+    """
+    timezone = icalendar.Timezone()
+    timezone.add('TZID', 'Europe/Dublin')
+
+    subcompDaylight = icalendar.TimezoneDaylight()
+    subcompDaylight.add('TZNAME', 'IST')
+    subcompDaylight.add('DTSTART', dt.datetime(1981, 3, 29, hour=1))
+    # subcompDaylight.add('DTSTART', '19810329T010000')
+    subcompDaylight.add('TZOFFSETFROM', dt.timedelta(hours = 0))
+    # subcompDaylight.add('TZOFFSETFROM', '+0000')
+    subcompDaylight.add('TZOFFSETTO', dt.timedelta(hours = 1))
+    # subcompDaylight.add('TZOFFSETTO', '+0100')
+    subcompDaylight.add('RRULE', {'FREQ': 'YEARLY', 'BYMONTH': 3, 'BYDAY': '-1SU'})
+    # subcompDaylight.add('RRULE', 'FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU')
+
+    subcompStandard = icalendar.TimezoneStandard()
+    subcompStandard.add('TZNAME', 'GMT')
+    subcompStandard.add('DTSTART', dt.datetime(1996, 10, 27, hour=2))
+    # subcompStandard.add('DTSTART', '19961027T020000')
+    subcompStandard.add('TZOFFSETFROM', dt.timedelta(hours = 1))
+    # subcompStandard.add('TZOFFSETFROM', '+0100')
+    subcompStandard.add('TZOFFSETTO', dt.timedelta(hours = 0))
+    # subcompStandard.add('TZOFFSETTO', '+0000')
+    # subcompStandard.add('RRULE', 'FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU')
+    subcompStandard.add('RRULE', {'FREQ': 'YEARLY', 'BYMONTH': 10, 'BYDAY': '-1SU'})
+
+    timezone.add_component(subcompDaylight)
+    timezone.add_component(subcompStandard)
     return timezone
